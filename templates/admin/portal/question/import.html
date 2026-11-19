@@ -1,0 +1,65 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+{% block extrastyle %}{{ block.super }}
+<style>
+.bulk-wrap{max-width:980px;margin:18px auto;padding:0 12px;direction:rtl}.bulk-card{background:var(--body-bg,#fff);border:1px solid var(--border-color,#ddd);border-radius:12px;padding:22px;margin:16px 0}.bulk-card h2{margin-top:0}.bulk-help{line-height:2;color:var(--body-quiet-color,#666)}.bulk-form{display:grid;gap:14px}.bulk-form input[type=file]{max-width:100%;padding:12px;border:1px solid var(--border-color,#ccc);border-radius:8px}.bulk-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.bulk-errors{max-height:420px;overflow:auto;line-height:2;color:#a12626}.bulk-table{width:100%;border-collapse:collapse;display:block;overflow-x:auto}.bulk-table th,.bulk-table td{padding:8px;border:1px solid var(--border-color,#ddd);white-space:nowrap}@media(max-width:600px){.bulk-card{padding:15px}.bulk-actions>*{width:100%;text-align:center}.bulk-form input[type=file]{width:100%}}
+</style>{% endblock %}
+{% block content %}
+<div class="bulk-wrap">
+  <div class="bulk-card">
+    <h2>ورود گروهی سؤالات به بانک سؤالات</h2>
+    <p class="bulk-help">
+      فایل Excel با پسوند xlsx یا CSV با کدگذاری UTF-8 انتخاب کن. هر ردیف یک سؤال است.
+      <strong>بانک سؤالات مربوط به هیچ آزمونی نیست</strong>؛ سؤالات هر آزمون بعداً بر اساس «ای دی مبحث» (شناسه یکتا)
+      توسط ادمین در بخش «اختصاص گروهی سؤالات به آزمون» تعیین می‌شود.
+      در صورت وجود حتی یک خطا، هیچ‌کدام از سؤال‌های آن فایل ثبت نمی‌شوند.
+    </p>
+    <div class="bulk-actions">
+      <a class="button" href="{% url 'admin:portal_question_import_template' %}">دانلود فایل نمونه Excel (ساختار جدید)</a>
+      <a class="button" href="{% url 'admin:portal_question_changelist' %}">بازگشت به بانک سؤالات</a>
+    </div>
+  </div>
+  <div class="bulk-card">
+    <h2>انتخاب فایل</h2>
+    <form method="post" enctype="multipart/form-data" class="bulk-form">{% csrf_token %}
+      <label for="track_code">مسیر آزمون (رشته) برای مباحث جدید</label>
+      <select id="track_code" name="track_code" style="max-width:100%;padding:10px;border:1px solid var(--border-color,#ccc);border-radius:8px" required>
+        <option value="">— انتخاب مسیر —</option>
+        {% for t in tracks %}
+        <option value="{{ t.code }}" {% if selected_track == t.code %}selected{% endif %}>{{ t.title }} ({{ t.code }})</option>
+        {% endfor %}
+      </select>
+      <input type="file" name="file" accept=".xlsx,.csv" required>
+      <label for="exam_id">اختصاص سؤالات جدید به آزمون (اختیاری)</label>
+      <select id="exam_id" name="exam_id" style="max-width:100%;padding:10px;border:1px solid var(--border-color,#ccc);border-radius:8px">
+        <option value="">فقط ورود به بانک سؤالات؛ بعداً از صفحه اختصاص گروهی استفاده می‌کنم</option>
+        {% for exam in exams %}<option value="{{ exam.pk }}">{{ exam.track.title }} — {{ exam.title }}</option>{% endfor %}
+      </select>
+      <p class="bulk-help">
+        <strong>نکته مهم:</strong> اگر آزمونی انتخاب نکنی، سؤال‌ها فقط وارد بانک می‌شوند و در هیچ آزمونی نمایش داده نمی‌شوند.
+        برای نمایش در آزمون، از «اختصاص گروهی سؤالات به آزمون» بر اساس ای‌دی مبحث استفاده کن.
+      </p>
+      <p class="bulk-help">حداکثر حجم: ۱۰ مگابایت · حداکثر تعداد: ۱۰٬۰۰۰ سؤال در هر فایل</p>
+      <div><button type="submit" class="default">بررسی و ثبت سؤالات</button></div>
+    </form>
+  </div>
+  <div class="bulk-card">
+    <h2>ساختار فایل اکسل ورودی (اصلی)</h2>
+    <table class="bulk-table"><thead><tr><th>نام ستون</th><th>توضیح</th></tr></thead><tbody>
+      <tr><td><code>ای دی مبحث</code></td><td>یک عدد/شناسه یکتا برای مبحث. مبنای بانک سؤالات است.</td></tr>
+      <tr><td><code>نام مبحث</code></td><td>عنوان مبحث (متنی)</td></tr>
+      <tr><td><code>شماره فصل</code></td><td>شماره فصل به‌صورت متنی</td></tr>
+      <tr><td><code>شماره بند</code></td><td>شماره بند به‌صورت متنی</td></tr>
+      <tr><td><code>سوال</code></td><td>متن سؤال</td></tr>
+      <tr><td><code>جواب1</code> تا <code>جواب4</code></td><td>متن چهار گزینه</td></tr>
+      <tr><td><code>جواب صحیح</code></td><td>۱، ۲، ۳، ۴ یا A، B، C، D</td></tr>
+      <tr><td><code>پاسخ تشریحی</code></td><td>توضیح تشریحی پاسخ (اختیاری)</td></tr>
+    </tbody></table>
+    <p class="bulk-help">
+      ردیف اول فایل باید عنوان ستون‌ها باشد. سؤال تکراری در همان مبحث پذیرفته نمی‌شود.
+      مباحث جدید بر اساس «ای دی مبحث» به‌صورت خودکار ساخته می‌شوند.
+    </p>
+  </div>
+  {% if errors %}<div class="bulk-card"><h2>خطاهای فایل ({{ error_count }})</h2><p>هیچ سؤالی ثبت نشد. موارد زیر را اصلاح و فایل را دوباره بارگذاری کن.</p><p>تعداد ردیف‌های معتبر: {{ valid_count }}</p><ul class="bulk-errors">{% for error in errors %}<li>{{ error }}</li>{% endfor %}{% if error_count > 100 %}<li>فقط ۱۰۰ خطای اول نمایش داده شده است.</li>{% endif %}</ul></div>{% endif %}
+</div>
+{% endblock %}

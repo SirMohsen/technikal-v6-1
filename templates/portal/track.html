@@ -1,0 +1,153 @@
+{% extends "portal/base.html" %}
+{% block title %}{{ track.title }} | تکنیکال{% endblock %}
+{% block content %}
+<main class="wrap inner pathway-page">
+    <div class="crumb"><a href="{% url 'home' %}">صفحه اصلی</a> / {{ track.title }}</div>
+
+    <section class="track-hero {{ track.accent }} pathway-hero">
+        <span class="eyebrow">اطلاعات کاربر</span>
+        <h1>{{ track.title }}</h1>
+        <p>{{ track.description|default:"برای آمادگی اصولی، مسیر را از سنجش اولیه تا ارزیابی نهایی دنبال کن." }}</p>
+        <div class="pathway-summary">
+            <div>
+                <strong>{{ completed_exams }}</strong>
+                <span>تعداد آزمون تکمیل‌شده از {{ total_exams }}</span>
+            </div>
+            <div>
+                <strong>{% if strength_topics %}{{ strength_topics|join:" · " }}{% else %}—{% endif %}</strong>
+                <span>نقاط قوت (سه مبحث با بالاترین امتیاز)</span>
+            </div>
+            <div>
+                <strong>{% if weakness_topics %}{{ weakness_topics|join:" · " }}{% else %}—{% endif %}</strong>
+                <span>نقاط ضعف (سه مبحث با پایین‌ترین امتیاز)</span>
+            </div>
+            <div>
+                {% if user.is_authenticated %}
+                <a class="btn primary small" href="{% url 'dashboard' %}">داشبورد شخصی</a>
+                <span>ورود به داشبورد شخصی</span>
+                {% else %}
+                <a class="btn outline small" href="{% url 'login' %}?next={% url 'track' track.code %}">ورود / ثبت‌نام</a>
+                <span>برای مشاهده داشبورد وارد شوید</span>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <div class="section-head pathway-heading">
+        <div><span class="eyebrow">نقشه راه شما</span><h2>از کجا شروع کنم؟</h2><p>هر مرحله چند آزمون مستقل دارد. وضعیت دسترسی و تعداد آزمون‌ها به‌صورت پویا از سامانه دریافت می‌شود.</p></div>
+        <span class="path-count">{{ total_exams }} آزمون در مسیر</span>
+    </div>
+
+    <div class="stage-list">
+        {% for item in stage_cards %}
+        <section class="stage-panel {% if not item.unlocked %}stage-locked{% endif %}">
+            <header class="stage-header">
+                <div class="stage-number">{% if item.stage.number == 0 %}۰{% else %}{{ item.stage.number }}{% endif %}</div>
+                <div class="stage-title">
+                    <span class="eyebrow">{% if item.stage.number == 0 %}مرحله صفرم{% else %}مرحله {{ item.stage.number }}{% endif %}</span>
+                    <h2>{{ item.stage.title }}</h2>
+                    <p>{{ item.stage.description }}</p>
+                </div>
+                <div class="stage-counts">
+                    <strong>{{ item.count }} آزمون</strong>
+                    <span>{{ item.completed }} تکمیل‌شده</span>
+                    {% if item.unlocked %}<span class="stage-state open-state">قابل دسترسی</span>{% else %}<span class="stage-state lock-state">قفل‌شده</span>{% endif %}
+                </div>
+            </header>
+
+            {% if item.exams %}
+            <div class="path-exam-list">
+                {% for row in item.exams %}
+                <article class="path-exam {% if row.status == 'completed' %}exam-completed{% elif not row.allowed %}exam-locked{% endif %}">
+                    <div class="path-exam-main">
+                        <div class="path-exam-icon">{% if row.status == 'completed' %}✓{% elif row.allowed %}↗{% else %}⌑{% endif %}</div>
+                        <div class="path-exam-copy">
+                            <div class="path-exam-labels">
+                                {% if row.exam.topic %}<span class="topic-label">{{ row.exam.topic.title }}</span>{% endif %}
+                                {% if row.exam.access_type == 'free' or row.exam.is_free %}<span class="access-label free-label">رایگان</span>{% elif row.exam.access_type == 'premium' %}<span class="access-label paid-label">ویژه</span>{% else %}<span class="access-label prerequisite-label">پیش‌نیازدار</span>{% endif %}
+                            </div>
+                            <h3>{{ row.exam.title }}</h3>
+                            {% if row.exam.description %}<p>{{ row.exam.description }}</p>{% endif %}
+                            <div class="path-exam-meta"><span>◷ {{ row.exam.duration_minutes }} دقیقه</span><span>▦ {{ row.exam.question_limit }} سؤال</span><span>حدنصاب: {{ row.exam.minimum_score }}٪</span>{% if row.progress %}<span>{{ row.progress.attempts_count }} بار شرکت</span>{% endif %}</div>
+                            {% if not row.allowed and row.status != 'completed' %}<small class="lock-reason">{{ row.reason }}</small>{% endif %}
+                            {% if row.progress and row.progress.status == 'completed' %}<small class="score-note">بهترین امتیاز شما: {{ row.progress.best_score }}٪</small>{% endif %}
+                            {% if row.exam.topic and row.exam.topic.keyword_chart %}<a class="chart-download" href="{{ row.exam.topic.keyword_chart.url }}" download>↓ دانلود چارت کلیدواژه {{ row.exam.topic.title }}</a>{% endif %}
+                        </div>
+                    </div>
+                    <div class="path-exam-action">
+                        {% if row.allowed %}
+                        <form method="post" action="{% url 'start_exam' track.code row.exam.slug %}">{% csrf_token %}<button class="btn primary small">{% if row.progress and row.progress.status == 'completed' %}شرکت مجدد{% else %}شروع آزمون{% endif %} ←</button></form>
+                        {% elif row.status == 'completed' %}
+                        <span class="completed-label">✓ تکمیل‌شده</span>
+                        {% elif not user.is_authenticated %}
+                        <a class="btn outline small" href="{% url 'login' %}?next={% url 'track' track.code %}">ورود برای ادامه</a>
+                        {% else %}<span class="locked-label">🔒 قفل</span>{% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="stage-empty">هنوز آزمونی برای این مرحله منتشر نشده است. آزمون‌ها پس از تعریف در پنل مدیریت اینجا نمایش داده می‌شوند.</div>
+            {% endif %}
+
+            {% if item.stage.number == 0 %}
+            <div class="stage-tools stage-zero-tools">
+                <div>
+                    <b>بازی سنجش اولیه (سبک دولینگو)</b>
+                    <span>
+                        هر آزمون شامل ۳ سؤال تصادفی است و حدود ۷٫۵ دقیقه زمان نیاز دارد.
+                        پس از هر آزمون یک تبلیغ ۲۰ ثانیه‌ای نمایش داده می‌شود.
+                        تعداد آزمون‌ها نامحدود است؛ پس از دو مرحله می‌توانید به مرحله اول بروید،
+                        اما در صورت تمایل بدون ثبت‌نام و پرداخت هزینه می‌توانید به بازی ادامه دهید.
+                    </span>
+                </div>
+            </div>
+            {% elif item.stage.number == 1 %}
+            <div class="stage-tools">
+                <div>
+                    <b>مطالعه و تمرین مباحث</b>
+                    <span>برای وارد شدن به این فصل نیاز به ورود به حساب کاربری می‌باشد.</span>
+                </div>
+                <a href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}?next={% url 'track' track.code %}{% endif %}">
+                    {% if user.is_authenticated %}داشبورد شخصی ←{% else %}ورود به حساب کاربری / داشبورد ←{% endif %}
+                </a>
+            </div>
+            {% elif item.stage.number == 2 %}
+            <div class="stage-tools">
+                <div><b>آزمون بر اساس سرفصل</b><span>آزمون‌های این مرحله بر اساس سرفصل‌های تعریف‌شده برگزار می‌شوند.</span></div>
+            </div>
+            {% elif item.stage.number == 3 %}
+            <div class="stage-tools">
+                <div><b>آزمون تشخیص مباحث</b><span>عملکرد زیر بر اساس پاسخ‌های ثبت‌شده در آزمون‌های این مسیر محاسبه می‌شود.</span></div>
+                <a href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'register' %}{% endif %}">داشبورد شخصی ←</a>
+            </div>
+            {% if user.is_authenticated %}
+                {% if topic_insights %}
+                <div class="topic-insights">
+                    {% for insight in topic_insights %}
+                    <article class="topic-insight"><div class="insight-top"><b>{{ insight.topic.title }}</b><strong>{{ insight.score }}٪</strong></div><div class="insight-bar"><span style="width:{{ insight.score }}%"></span></div><small>{{ insight.label }} · {{ insight.correct }} پاسخ صحیح از {{ insight.total }} سؤال</small><p>{{ insight.advice }}</p></article>
+                    {% endfor %}
+                </div>
+                {% else %}<div class="insight-empty">پس از شرکت در آزمون‌های مبحثی، تحلیل نقاط قوت و ضعف اینجا نمایش داده می‌شود.</div>{% endif %}
+            {% else %}<div class="insight-empty">برای ذخیره و تحلیل پیشرفت مباحث، وارد حساب کاربری شو.</div>{% endif %}
+            {% elif item.stage.number == 4 %}
+            <div class="stage-tools"><div><b>آزمون جامع</b><span>مدت آزمون و تعداد سؤال‌ها از تنظیمات هر آزمون خوانده می‌شود.</span></div></div>
+            {% endif %}
+        </section>
+        {% empty %}
+        <div class="empty">مراحل مسیر هنوز ساخته نشده‌اند. مدیر سایت باید دستور setup_exam_pathway را اجرا کند.</div>
+        {% endfor %}
+    </div>
+
+    {% if legacy_exams %}
+    <section class="legacy-section">
+        <div class="section-head"><div><span class="eyebrow">نیازمند دسته‌بندی</span><h2>آزمون‌های بدون مرحله</h2><p>این آزمون‌ها هنوز به یکی از پنج مرحله اختصاص داده نشده‌اند و برای حفظ دسترسی قبلی نمایش داده می‌شوند.</p></div></div>
+        <div class="catalog">
+            {% for row in legacy_exams %}
+            <article class="catalog-card"><div class="catalog-top"><span class="tag">{{ row.exam.get_mode_display }}</span>{% if row.allowed %}<span class="free">قابل دسترسی</span>{% else %}<span class="premium">قفل</span>{% endif %}</div><h3>{{ row.exam.title }}</h3><p>{{ row.exam.description }}</p><div class="meta"><span>◷ {{ row.exam.duration_minutes }} دقیقه</span><span>▦ {{ row.exam.question_limit }} سؤال</span></div>{% if row.allowed %}<form method="post" action="{% url 'start_exam' track.code row.exam.slug %}">{% csrf_token %}<button class="btn primary block">شروع آزمون ←</button></form>{% else %}<small class="lock-reason">{{ row.reason }}</small>{% endif %}</article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}

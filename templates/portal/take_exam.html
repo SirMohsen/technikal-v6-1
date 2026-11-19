@@ -1,0 +1,63 @@
+{% extends "portal/base.html" %}
+{% load static %}
+{% block title %}محیط آزمون{% endblock %}{
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+{% block content %}
+<main class="wrap exam-page" id="exam-app" data-save-url="{% url 'save_answer' attempt.pk %}">
+    <div class="exam-head">
+        <div>
+            <span class="eyebrow">آزمون در حال برگزاری</span>
+            <h1>{{ attempt.exam.title }}</h1>
+        </div>
+        <div class="clock">
+            <small>زمان باقی‌مانده</small>
+            <strong id="clock" data-seconds="{{ remaining }}">--:--</strong>
+        </div>
+    </div>
+    <div class="test-layout">
+        <section class="panel test-panel">
+            <div class="test-status">
+                <span id="counter">سؤال ۱</span>
+                <span id="save-status">ذخیره خودکار فعال است</span>
+            </div>
+            <div class="progress">
+                <i id="progress"></i>
+            </div>
+            {% for item in items %}
+            <article class="test-question{% if not forloop.first %} hidden{% endif %}" data-qid="{{ item.question.pk }}" data-marked="{{ item.marked|yesno:'1,0' }}">
+                <div class="qmeta">
+                    <span>سؤال {{ item.number }}</span>
+                    <span>{{ item.question.topic.title }}</span>
+                </div>
+                <h2>{{ item.question.text }}</h2>
+                <div class="answers">
+                    {% for c in item.choices %}
+                    <label class="answer{% if c.id == item.selected_id %} selected{% endif %}">
+                        <input type="radio" name="q{{ item.question.pk }}" value="{{ c.pk }}" {% if c.id == item.selected_id %}checked{% endif %}>
+                        <b>
+                            {{ c.label }}
+                        </b>
+                        <span>{{ c.text }}</span>
+                    </label>
+                     {% endfor %}
+                </div>
+                <button type="button" class="mark-btn" data-mark>⚑ علامت‌گذاری برای مرور</button>
+            </article>
+            {% endfor %}
+            <div class="test-controls">
+                <button id="previous" class="btn outline" type="button">سؤال قبلی</button>
+                <button id="next" class="btn primary" type="button">سؤال بعدی ←</button>
+            </div>
+        </section>
+        <aside class="panel answer-sheet">
+            <h3>پاسخ‌نامه</h3><p>برای رفتن به هر سؤال، شماره آن را انتخاب کن.</p>
+            <div class="sheet-grid">
+                {% for item in items %}
+                    <button data-jump="{{ forloop.counter0 }}" class="{% if forloop.first %}current{% endif %}">
+                        {{ item.number }}
+                    </button>
+                {% endfor %}
+            </div>
+            <div class="legend"><span>● پاسخ‌داده‌شده</span><span>● علامت‌دار</span><span>● بی‌پاسخ</span></div><div class="done"><strong id="done-count">۰</strong><span>پاسخ داده‌شده</span></div><button id="finish" class="btn danger block" type="button">پایان و ثبت آزمون</button></aside></div><form id="submit-form" method="post" action="{% url 'submit_exam' attempt.pk %}" hidden>{% csrf_token %}</form></main><div id="confirm" class="modal hidden"><div class="modal-card"><h2>ثبت نهایی آزمون؟</h2><p>پس از ثبت نهایی امکان تغییر پاسخ‌ها وجود ندارد.</p><div class="modal-actions"><button id="cancel" class="btn outline" type="button">بازگشت</button><button id="confirm-submit" class="btn danger" type="button">ثبت نهایی</button></div></div></div>{% endblock %}{% block scripts %}<script src="{% static 'js/test.js' %}" defer></script>{% endblock %}

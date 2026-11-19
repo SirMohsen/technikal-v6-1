@@ -1,0 +1,7 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+{% block object-tools-items %}
+<li><a href="{% url 'admin:portal_question_bulk_import' %}" class="addlink">ورود انبوه از Excel / CSV</a></li>
+<li><a href="{% url 'admin:portal_question_assign_to_exam' %}" class="addlink">اختصاص گروهی سؤالات به آزمون</a></li>
+{{ block.super }}
+{% endblock %}

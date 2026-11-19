@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% block extrastyle %}{{ block.super }}
+<style>
+.assign-wrap{max-width:900px;margin:18px auto;padding:0 12px;direction:rtl}.assign-card{background:var(--body-bg,#fff);border:1px solid var(--border-color,#ddd);border-radius:12px;padding:22px;margin:16px 0}.assign-card h2{margin-top:0}.assign-help{line-height:2;color:var(--body-quiet-color,#666)}.assign-form{display:grid;gap:14px}.assign-form select{width:100%;max-width:100%;padding:12px;border:1px solid var(--border-color,#ccc);border-radius:8px;background:var(--body-bg,#fff);color:var(--body-fg,#222)}.assign-actions{display:flex;gap:12px;flex-wrap:wrap}@media(max-width:600px){.assign-card{padding:15px}.assign-actions>*{width:100%;text-align:center}}
+</style>{% endblock %}
+{% block content %}
+<div class="assign-wrap">
+  <div class="assign-card">
+    <h2>اختصاص گروهی سؤالات موجود به یک آزمون</h2>
+    <p class="assign-help">این ابزار برای سؤال‌هایی است که قبلاً وارد بانک شده‌اند اما هنوز به آزمون متصل نیستند. یک آزمون و یک مبحث انتخاب کن؛ تمام سؤال‌های فعال آن مبحث که هنوز در آزمون نیستند، به انتهای آزمون اضافه می‌شوند. سؤال‌های تکراری دوباره اضافه نمی‌شوند.</p>
+  </div>
+  <div class="assign-card">
+    <form method="post" class="assign-form">{% csrf_token %}
+      <label for="exam_id">آزمون مقصد</label>
+      <select id="exam_id" name="exam_id" required>
+        <option value="">انتخاب آزمون</option>
+        {% for exam in exams %}<option value="{{ exam.pk }}" {% if selected_exam_id|stringformat:"s" == exam.pk|stringformat:"s" %}selected{% endif %}>{{ exam.track.title }} — {{ exam.title }}</option>{% endfor %}
+      </select>
+      <label for="topic_id">مبحث مبدأ</label>
+      <select id="topic_id" name="topic_id" required>
+        <option value="">انتخاب مبحث</option>
+        {% for topic in topics %}<option value="{{ topic.pk }}" {% if selected_topic_id|stringformat:"s" == topic.pk|stringformat:"s" %}selected{% endif %}>{{ topic.track.title }} — {{ topic.title }} ({{ topic.slug }})</option>{% endfor %}
+      </select>
+      <p class="assign-help">رشته آزمون و مبحث باید یکسان باشند. فقط سؤال‌های فعال وارد آزمون می‌شوند. برای خارج کردن سؤال از آزمون‌های آینده، آن را از بانک سؤالات غیرفعال کن.</p>
+      <div class="assign-actions"><button type="submit" class="default">اختصاص سؤالات به آزمون</button><a class="button" href="{% url 'admin:portal_question_changelist' %}">بازگشت به بانک سؤالات</a></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "portal/base.html" %}{% block content %}
+<main class="auth-wrap">
+    <section class="auth-card"><span class="eyebrow">حساب کاربری معمارآزمون</span>
+        <h1>{{ heading }}</h1>
+        <p class="muted">{% if register_mode %}برای ذخیره سوابق و استفاده از امکانات شخصی حساب بساز.{% else %}برای ادامه
+            مسیر مطالعاتی وارد حساب خودت شو.{% endif %}</p>
+        <form class="form-stack" method="post">{% csrf_token %}{{ form.as_p }}
+            <button class="btn primary block">{% if register_mode %}ثبت‌نام{% else %}ورود{% endif %}</button>
+        </form>
+        <div class="switch">{% if register_mode %}حساب داری؟ <a href="{% url 'login' %}">وارد شو</a>{% else %}حساب
+            نداری؟ <a href="{% url 'register' %}">ثبت‌نام کن</a>{% endif %}
+        </div>
+    </section>
+</main>{% endblock %}

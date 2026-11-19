@@ -1,0 +1,61 @@
+{% load static %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{% block title %}آمادگی برای آزمون نظام مهندسی معماری{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/site.css' %}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+<header class="header">
+    <a class="brand" href="{% url 'home' %}"><b>ت</b><span>تکنیکال<small>آمادگی برای آزمون نظام مهندسی معماری</small></span></a>
+    <nav>
+        <a href="{% url 'home' %}">صفحه اصلی</a>
+        <a href="/#tracks">انتخاب آزمون</a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'dashboard' %}">داشبورد من</a>
+        {% endif %}</nav>
+    <div class="head-actions">
+        {% if user.is_authenticated %}
+        <a href="{% url 'dashboard' %}" class="btn light">حساب کاربری</a>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="link-btn">خروج</button>
+        </form>
+        {% else %}
+        <a class="link-btn" href="{% url 'login' %}">ورود</a>
+        <a class="btn primary small" href="{% url 'register' %}">ثبت‌نام</a>
+        {% endif %}
+    </div>
+    <details class="mobile-nav">
+        <summary aria-label="باز کردن منو">☰</summary>
+        <div class="mobile-nav-panel">
+            <a href="{% url 'home' %}">صفحه اصلی</a>
+            <a href="/#tracks">انتخاب آزمون</a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}">داشبورد من</a>
+            <a href="{% url 'profile' %}">پروفایل مطالعاتی</a>
+            <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">خروج از حساب</button></form>
+            {% else %}<a href="{% url 'login' %}">ورود</a><a href="{% url 'register' %}">ثبت‌نام</a>{% endif %}
+        </div>
+    </details>
+</header>
+{% if messages %}
+<div class="messages">
+    {% for m in messages %}
+    <p>{{ m }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+{% block content %}{% endblock %}
+<footer>
+    <b>تکنیکال</b>
+    <p>مسیر آمادگی هدفمند برای آزمون نظام مهندسی معماری</p>
+    <small> در حال توسعه</small>
+</footer>
+{% block scripts %}
+{% endblock %}
+</body>
+</html>

@@ -1,0 +1,86 @@
+{% extends "portal/base.html" %}
+{% block content %}
+<main>
+    <section class="hero wrap">
+        <div class="hero-copy"><span class="eyebrow">آمادگی هوشمند، قدم‌به‌قدم</span>
+            <h1>با برنامه آماده شو؛<br><em>با اطمینان</em> آزمون بده.</h1>
+            <p>تمرین هدفمند، آزمون‌های شبیه‌سازی‌شده و تحلیل عملکرد؛ همه در یک مسیر منظم برای موفقیت در آزمون نظام
+                مهندسی معماری.</p>
+            <div class="actions"><a class="btn primary" href="#tracks">انتخاب مسیر آزمون ←</a><a class="btn outline"
+                    href="#features">آشنایی با سامانه</a></div>
+            <div class="proof"><span>✓ آزمون رایگان برای شروع</span><span>✓ تحلیل و پیگیری پیشرفت</span></div>
+        </div>
+        <div class="hero-visual">
+            <div class="orbit o1"></div>
+            <div class="orbit o2"></div>
+            <div class="blueprint">
+                <div class="bp-head"><span>ARCHITECTURE / EXAM</span><span>۰۱</span></div><svg viewBox="0 0 430 280">
+                    <path
+                        d="M45 235V120L215 30 385 120V235M80 235V140L215 65 350 140V235M45 120H385M80 158H350M120 235V170H180V235M240 235V170H310V235M215 30V235M35 250H395"
+                        fill="none" stroke="#b9c8ee" stroke-width="3" />
+                    <path d="M215 15V265" stroke="#8296d6" stroke-dasharray="5 8" />
+                    <circle cx="215" cy="30" r="7" fill="#9b8df2" />
+                </svg>
+                <div class="bp-caption"><b>مسیر حرفه‌ای تو از اینجا شروع می‌شود</b><span>تمرین کن · تحلیل کن · پیشرفت
+                        کن</span></div>
+            </div>
+            <div class="float-chip top-chip">✦ برنامه مطالعاتی شخصی</div>
+            <div class="float-chip bottom-chip">✓ پیشرفت قابل اندازه‌گیری</div>
+        </div>
+    </section>
+    <section class="tracks-section" id="tracks">
+        <div class="wrap">
+            <div class="section-head">
+                <div><span class="eyebrow">اولین قدم</span>
+                    <h2>برای کدام آزمون آماده می‌شوی؟</h2>
+                    <p>مسیر خودت را انتخاب کن تا آزمون‌ها و تمرین‌های مرتبط را ببینی.</p>
+                </div><small>01 / انتخاب مسیر</small>
+            </div>
+            <div class="track-grid">{% for t in tracks %}<a class="track-card {{ t.accent }}"
+                    href="{% url 'track' t.code %}">
+                    <div class="track-icon">{% if t.code == 'execution' %}⌂{% else %}▤{% endif %}</div>
+                    <div class="track-body"><small>مسیر تخصصی معماری</small>
+                        <h3>{{ t.title }}</h3>
+                        <p>{{ t.subtitle }}</p><b>مشاهده آزمون‌ها ←</b>
+                    </div><strong class="watermark">{% if t.code == 'execution' %}01{% else %}02{% endif %}</strong>
+                </a>{% empty %}<div class="empty">مسیرها هنوز تعریف نشده‌اند؛ دستور seed_demo را اجرا کنید.</div>
+                {% endfor %}</div>
+        </div>
+    </section>
+    <section class="wrap features" id="features">
+        <div class="section-head">
+            <div><span class="eyebrow">یک مسیر کامل‌تر</span>
+                <h2>فقط تست نزن؛ پیشرفتت را مدیریت کن.</h2>
+            </div>
+        </div>
+        <div class="feature-grid">
+            <article><b>01</b>
+                <h3>مطالعه و تمرین مباحث</h3>
+                <p>بررسی نکات مهم و چارت های مباحث</p>
+                <p>مشاوره سخصی</p>
+            </article>
+            <article><b>02</b>
+                <h3>آزمون بر اساس سرفصل</h3>
+                <p>مرحله بندی مطالعه فصل های آیین نامه ها</p>
+                <p>تنظیم برنامه مطالعاتی شخصی</p>
+            </article>
+            <article><b>03</b>
+                <h3>آزمون تشخیص مباحث</h3>
+                <p>آزمون های مرحله بندی شده و با زمان بندی فشرده</p>
+                <p>بررسی کلید واژ ها</p>
+            </article>
+            <article><b>04</b>
+                <h3>آزمون جامع</h3>
+                <p>زمان بندی واقعی</p>
+                <p>استفاده از چارت و کلید واژه در آزمون مشابه سازی شده</p>
+            </article>
+        </div>
+    </section>
+    <section class="wrap cta">
+        <div><span class="eyebrow">از یک آزمون کوتاه شروع کن</span>
+            <h2>اولین قدم را همین امروز بردار.</h2>
+            <p>برای آشنایی با محیط، آزمون‌های رایگان را بدون ثبت‌نام امتحان کن.</p>
+        </div><a class="btn white" href="#tracks">شروع رایگان ←</a>
+    </section>
+</main>
+{% endblock %}
