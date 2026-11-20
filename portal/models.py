@@ -53,7 +53,7 @@ class Topic(models.Model):
         upload_to="keyword_charts/",
         blank=True,
         null=True,
-        help_text="فایل قابل دانلود چارت کلیدواژه این مبحث"
+        help_text="قابل دانلود چارت کلیدواژه این مبحث"
     )
 
     class Meta:
@@ -150,8 +150,6 @@ class ExamStage(models.Model):
     title = models.CharField(max_length=180)
     description = models.TextField(blank=True)
     order = models.PositiveSmallIntegerField(default=0)
-    # Percentage of required exams in the previous stage that must be passed
-    # before this stage becomes available to a user.
     required_completion_percent = models.PositiveSmallIntegerField(default=100)
     is_active = models.BooleanField(default=True)
 
@@ -171,7 +169,7 @@ class Exam(models.Model):
     ACCESS_TYPES=[("free","رایگان"),("premium","ویژه"),("prerequisite","نیازمند پیش‌نیاز")]
     access_type=models.CharField(max_length=20,choices=ACCESS_TYPES,default="premium")
     prerequisite_exam=models.ForeignKey("self",null=True,blank=True,on_delete=models.SET_NULL,related_name="unlocks_exams")
-    minimum_score=models.DecimalField(max_digits=5,decimal_places=2,default=60,help_text="حداقل امتیاز این آزمون برای باز شدن آزمون بعدی")
+    minimum_score=models.DecimalField(max_digits=5,decimal_places=2,default=60,help_text="حداقل امتیاز امین برای باز شدن آزمون بعدی")
     counts_for_stage_unlock=models.BooleanField(default=True,help_text="در محاسبه تکمیل مرحله برای باز شدن مرحله بعد لحاظ شود")
     topic=models.ForeignKey(Topic,null=True,blank=True,on_delete=models.SET_NULL,related_name="exams")
     title=models.CharField(max_length=220); slug=models.SlugField(max_length=230,unique=True)
@@ -194,7 +192,7 @@ class Exam(models.Model):
 
 class ExamQuestion(models.Model):
     exam=models.ForeignKey(Exam,on_delete=models.CASCADE,related_name="exam_questions")
-    question=models.ForeignKey(Question,on_delete=models.PROTECT,related_name="exam_appearances")
+    question=models.ForeignKey(Question,on_delete=models.CASCADE,related_name="exam_appearances")
     order=models.PositiveIntegerField(default=1)
     points=models.DecimalField(max_digits=5,decimal_places=2,default=1)
     class Meta:
@@ -222,7 +220,7 @@ class Attempt(models.Model):
 
 class AttemptAnswer(models.Model):
     attempt=models.ForeignKey(Attempt,on_delete=models.CASCADE,related_name="answers")
-    question=models.ForeignKey(Question,on_delete=models.PROTECT)
+    question=models.ForeignKey(Question,on_delete=models.CASCADE)
     selected_choice=models.ForeignKey(Choice,null=True,blank=True,on_delete=models.SET_NULL)
     marked_for_review=models.BooleanField(default=False)
     updated_at=models.DateTimeField(auto_now=True)
@@ -233,52 +231,52 @@ class AttemptAnswer(models.Model):
 class AttemptQuestion(models.Model):
     """The immutable question set assigned to one exam attempt."""
     attempt=models.ForeignKey(Attempt,on_delete=models.CASCADE,related_name="attempt_questions")
-    question=models.ForeignKey(Question,on_delete=models.PROTECT,related_name="attempt_appearances")
+    question=models.ForeignKey(Question,on_delete=models.CASCADE,related_name="attempt_appearances")
     order=models.PositiveIntegerField(default=1)
     points=models.DecimalField(max_digits=5,decimal_places=2,default=1)
     class Meta:
         ordering=["order","pk"]
         constraints=[
             models.UniqueConstraint(fields=["attempt","question"],name="uniq_attempt_question"),
-            models.UniqueConstraint(fields=["attempt","order"],name="uniq_attempt_question_order"),
+            models.UniqueConstraint(fields=["attempt","order"],name="uniq_attempt_order"),
         ]
 
 
 class UserExamProgress(models.Model):
     """Cached per-user progress; Attempt/AttemptAnswer remain the source of truth."""
-    STATUS_CHOICES = [("locked", "قفل"), ("unlocked", "باز"), ("completed", "تکمیل‌شده")]
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="exam_progress")
-    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="user_progress")
-    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="locked")
+    STATUS_CHOICES = [("locked","قفل"),("unlocked","باز"),("completed","تکمیل‌شده")]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE,related_name="exam_progress")
+    exam = models.ForeignKey(Exam,on_delete=models.CASCADE,related_name="user_progress")
+    status = models.CharField(max_length=12,choices=STATUS_CHOICES,default="locked")
     attempts_count = models.PositiveIntegerField(default=0)
-    best_score = models.DecimalField(max_digits=6, decimal_places=2, default=0)
-    last_score = models.DecimalField(max_digits=6, decimal_places=2, default=0)
-    unlocked_at = models.DateTimeField(null=True, blank=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
+    best_score = models.DecimalField(max_digits=6,decimal_places=2,default=0)
+    last_score = models.DecimalField(max_digits=6,decimal_places=2,default=0)
+    unlocked_at = models.DateTimeField(null=True,blank=True)
+    completed_at = models.DateTimeField(null=True,blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["user", "exam"], name="uniq_user_exam_progress")]
-        indexes = [models.Index(fields=["user", "status"], name="portal_user_progress_idx")]
+        constraints=[models.UniqueConstraint(fields=["user","exam"],name="uniq_user_exam_progress")]
+        indexes=[models.Index(fields=["user","status"],name="portal_user_progress_idx")]
 
     def __str__(self):
         return f"{self.user} / {self.exam} / {self.get_status_display()}"
 
 
 class ExamPurchase(models.Model):
-    STATUS_CHOICES = [("pending", "در انتظار پرداخت"), ("paid", "پرداخت‌شده"), ("refunded", "مستردشده")]
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="exam_purchases")
-    exam = models.ForeignKey(Exam, on_delete=models.PROTECT, related_name="purchases")
-    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="pending")
-    amount = models.PositiveBigIntegerField(default=0, help_text="مبلغ به ریال")
-    provider = models.CharField(max_length=40, blank=True)
-    transaction_id = models.CharField(max_length=120, blank=True)
-    paid_at = models.DateTimeField(null=True, blank=True)
+    STATUS_CHOICES = [("pending","در انتظار پرداخت"),("paid","پرداخت‌شده"),("refunded","مستردشده")]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE,related_name="exam_purchases")
+    exam = models.ForeignKey(Exam,on_delete=models.PROTECT,related_name="purchases")
+    status = models.CharField(max_length=12,choices=STATUS_CHOICES,default="pending")
+    amount = models.PositiveBigIntegerField(default=0,help_text="مبلغ به ریال")
+    provider = models.CharField(max_length=40,blank=True)
+    transaction_id = models.CharField(max_length=120,blank=True)
+    paid_at = models.DateTimeField(null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["user", "exam"], name="uniq_exam_purchase_user")]
-        indexes = [models.Index(fields=["user", "status"], name="portal_purchase_user_idx")]
+        constraints=[models.UniqueConstraint(fields=["user","exam"],name="uniq_exam_purchase_user")]
+        indexes=[models.Index(fields=["user","status"],name="portal_purchase_user_idx")]
 
     def __str__(self):
         return f"{self.user} / {self.exam} / {self.get_status_display()}"

@@ -1,10 +1,10 @@
 from django.contrib import admin, messages
 from django.forms.models import BaseInlineFormSet
+from django.db import transaction
 from django.db.models import Q, TextField
 from django.db.models.functions import Cast
 from django.core.exceptions import ValidationError
-from django.urls import path, reverse
-from django.utils.html import format_html
+from django.urls import path
 
 from .models import *
 from .question_import import get_assign_view, get_import_view, sample_file
@@ -69,7 +69,6 @@ class QuestionAdmin(admin.ModelAdmin):
     actions = ("archive_questions", "restore_questions", "force_delete_questions")
 
     def get_search_results(self, request, queryset, search_term):
-        """Search question content, topic external_id / slug, and serialized tags."""
         terms = search_term.split()
         if terms:
             queryset = queryset.alias(_tags_search_text=Cast("tags", TextField()))
@@ -107,16 +106,74 @@ class QuestionAdmin(admin.ModelAdmin):
         count = queryset.update(is_active=True)
         self.message_user(request, f"{count} سؤال فعال شد.", messages.SUCCESS)
 
-    @admin.action(description="حذف دائمی سؤال‌های انتخاب‌شده (حتی در صورت اتصال به آزمون)")
-    def force_delete_questions(self, request, queryset):
-        """Admin can delete any question as requested. Linked exam relations cascade."""
-        count = queryset.count()
-        queryset.delete()
-        self.message_user(request, f"{count} سؤال به‌صورت دائمی حذف شد.", messages.SUCCESS)
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if not request.user.is_superuser:
+            actions.pop("force_delete_questions", None)
+        return actions
 
     def has_delete_permission(self, request, obj=None):
-        # Admin can edit and delete all questions (requirement #3).
-        return True
+        # Permanent question deletion is restricted to Django superusers.
+        return bool(request.user and request.user.is_active and request.user.is_superuser)
+
+    def delete_model(self, request, obj):
+        if not request.user.is_superuser:
+            raise PermissionError("فقط مدیر اصلی می‌تواند سؤال را حذف کند.")
+        self._delete_with_replacement(obj)
+
+    def delete_queryset(self, request, queryset):
+        if not request.user.is_superuser:
+            raise PermissionError("فقط مدیر اصلی می‌تواند سؤال را حذف کند.")
+        deleted = 0
+        for question in queryset:
+            deleted += self._delete_with_replacement(question)
+
+    def _delete_with_replacement(self, question):
+        """Replace each ExamQuestion link, then permanently delete the question."""
+        replaced = 0
+        with transaction.atomic():
+            appearances = list(question.exam_appearances.select_for_update().select_related("exam"))
+            for appearance in appearances:
+                existing_ids = set(
+                    appearance.exam.exam_questions.exclude(question=question).values_list("question_id", flat=True)
+                )
+                candidates = Question.objects.filter(
+                    topic=question.topic,
+                    is_active=True,
+                    topic__is_active=True,
+                    topic__track__is_active=True,
+                ).exclude(pk=question.pk).exclude(pk__in=existing_ids)
+
+                replacement = candidates.filter(difficulty=question.difficulty).order_by("pk").first()
+                if replacement is None:
+                    replacement = candidates.order_by("pk").first()
+
+                if replacement is not None:
+                    appearance.question = replacement
+                    appearance.save(update_fields=["question"])
+                    replaced += 1
+                else:
+                    appearance.delete()
+
+            question.delete()
+        return replaced
+
+    @admin.action(description="حذف دائمی و جایگزینی خودکار سؤال‌های انتخاب‌شده")
+    def force_delete_questions(self, request, queryset):
+        if not request.user.is_superuser:
+            self.message_user(request, "فقط مدیر اصلی می‌تواند سؤال را حذف کند.", messages.ERROR)
+            return
+        deleted = 0
+        replaced = 0
+        for question in queryset:
+            before = question.exam_appearances.count()
+            replaced += self._delete_with_replacement(question)
+            deleted += 1
+        self.message_user(
+            request,
+            f"{deleted} سؤال حذف شد و {replaced} اتصال آزمون با سؤال جایگزین به‌روزرسانی شد.",
+            messages.SUCCESS,
+        )
 
     def get_urls(self):
         custom = [
@@ -187,8 +244,7 @@ class AttemptAdmin(admin.ModelAdmin):
 @admin.register(UserExamProgress)
 class UserExamProgressAdmin(admin.ModelAdmin):
     list_display = ("user", "exam", "status", "attempts_count", "best_score", "last_score", "updated_at")
-    list_filter = ("status", "exam__track", "exam__stage")
-    search_fields = ("user__username", "exam__title")
+    list_filter = ("status", "exam__stage")
     readonly_fields = ("attempts_count", "best_score", "last_score", "unlocked_at", "completed_at", "updated_at")
 
 
@@ -201,9 +257,8 @@ class ExamPurchaseAdmin(admin.ModelAdmin):
 
     @admin.action(description="ثبت پرداخت موفق برای خریدهای انتخاب‌شده")
     def mark_as_paid(self, request, queryset):
-        from django.utils import timezone
         count = queryset.exclude(status="paid").update(status="paid", paid_at=timezone.now())
-        self.message_user(request, f"دسترسی {count} خرید فعال شد. اتصال درگاه پرداخت باید جداگانه انجام شود.", messages.SUCCESS)
+        self.message_user(request, f"دسترسی {count} خرید فعال شد.", messages.SUCCESS)
 
 
 admin.site.register(StudyProfile)
